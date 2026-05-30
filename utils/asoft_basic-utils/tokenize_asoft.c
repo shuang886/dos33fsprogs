@@ -259,17 +259,29 @@ int main(int argc, char **argv) {
 	int offset=2,i;
 
 	int linenum=0,custom_offset=0,lastline=0,link_offset;
-	int link_value=0x801; /* start of applesoft program */
+	int link_value;
 	int token;
 	int c;
 	FILE *fff;
+	int no_size=0;
+	int base_address=0x801; /* start of applesoft program */
 
 	/* Check command line arguments */
-	while ((c = getopt (argc, argv,"d"))!=-1) {
+	while ((c = getopt (argc, argv,"b::ds"))!=-1) {
 		switch (c) {
 
+		case 'b':
+			if (optarg==NULL) {
+				fprintf(stderr,"Error, -b requires hexadecimal address\n");
+				exit(1);
+			}
+			base_address=strtol(optarg, NULL, 16);
+			break;
 		case 'd':
 			debug=1;
+			break;
+		case 's':
+			no_size=1;
 			break;
 		}
 	}
@@ -287,6 +299,7 @@ int main(int argc, char **argv) {
 		if (debug) fprintf(stderr,"Opened file %s\n",argv[optind]);
 	}
 
+	link_value=base_address;
 	while(1) {
 		/* get line from input file */
 		line_ptr=fgets(input_line,BUFSIZ,fff);
@@ -370,7 +383,7 @@ int main(int argc, char **argv) {
 	output[0]=LOW(offset-1);
 	output[1]=HIGH(offset-1);
 	/* output our file */
-	for(i=0;i<offset;i++) putchar(output[i]);
+	for(i=(no_size?2:0);i<offset;i++) putchar(output[i]);
 
 	return 0;
 }
