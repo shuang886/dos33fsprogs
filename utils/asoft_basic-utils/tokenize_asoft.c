@@ -216,11 +216,13 @@ static int find_token(void) {
 					strlen(applesoft_tokens[i]),
 					&token_end)) {
 
-				/* HACK: special case to avoid AT/ATN problem */
-				/* Update, apparently actual applesoft uses   */
-				/*         a similar hack.  Also the 'A TO'   */
-				/*         case which we don't handle because */
-				/*         we like sane whitespace.           */
+				if (i==69) {
+					// "ATN" takes precedence over "AT"
+					if (line_ptr[2]=='N') continue;
+					
+					// "A TO" takes precendence over "AT O"
+					if (line_ptr[1]!='T') continue;
+				}
 				if ((i==69) && (line_ptr[2]=='N')) continue;
 //				fprintf(stderr,
 //						"Found token %x (%s) %d\n",0x80+i,
