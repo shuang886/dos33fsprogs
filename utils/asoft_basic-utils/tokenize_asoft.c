@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
 		in_quotes=0;
 
 		/* 2 bytes is to ignore size from beginning of file */
-		link_value=0x801+(offset-2);
+		link_value=base_address+(offset-2);
 
 		/* point link value to next line */
 		check_oflo(offset+2);
