@@ -155,6 +155,12 @@ static int strncmp_ignore_spaces(char *line, char *token,
 
 static int in_quotes=0,in_rem=0;
 
+// actually a tri-state:
+// 0 - not in data
+// 1 - in data, but ignoring (leading) spaces
+// 2 - in data, capturing spaces
+static int in_data=0;
+
 /* note: try to find longest possible token */
 /* otherwise ATN is turned into AT N */
 static int find_token(void) {
@@ -176,14 +182,26 @@ static int find_token(void) {
 		return 0;
 	}
 
-	/* don't skip whitespace in quotes or remarks */
-	if ((!in_quotes)&&(!in_rem)) {
+	/* end data if end of line */
+	if (in_data && (ch=='\n')) {
+		in_data=0;
+		return 0;
+	}
+	
+	/* don't skip whitespace in quotes, remarks, or data */
+	if ((!in_quotes)&&(!in_rem)&&(in_data<2)) {
 		while(ch<=' ') {
 			if ((ch=='\n') || (ch=='\r') || (ch=='\0')) {
 				return 0;
 			}
 			line_ptr++;
 			ch=*line_ptr;
+			
+			/* exactly one leading space swallowed, spaces now relevant */
+			if (in_data==1) {
+				in_data=2;
+				break;
+			}
 		}
 	}
 
@@ -191,7 +209,7 @@ static int find_token(void) {
 	if (ch=='\"') in_quotes=!in_quotes;
 
 	/* don't tokenize if in quotes */
-	if ((!in_quotes)&&(!in_rem)) {
+	if ((!in_quotes)&&(!in_rem)&&(!in_data)) {
 
 		/* hack: handle ? as a BA PRINT token */
 		if (line_ptr[0]=='?') {
@@ -223,7 +241,6 @@ static int find_token(void) {
 					// "A TO" takes precendence over "AT O"
 					if (line_ptr[1]!='T') continue;
 				}
-				if ((i==69) && (line_ptr[2]=='N')) continue;
 //				fprintf(stderr,
 //						"Found token %x (%s) %d\n",0x80+i,
 //						applesoft_tokens[i],i);
@@ -234,6 +251,9 @@ static int find_token(void) {
 				/* REM is 0x32 (0xB2) */
 				if (i==0x32) in_rem=1;
 
+				/* DATA is 0x03 (0x83) */
+				if (i==0x03) in_data=1;
+				
 				return 0x80+i;
 			}
 
@@ -244,6 +264,9 @@ static int find_token(void) {
 	//fprintf(stderr,"\n");
 
 	/* not a token, just ascii */
+	
+	if (ch==0x3A) in_data=0; /* ':' ends DATA */
+	
 	line_ptr++;
 	return ch;
 }
@@ -359,6 +382,9 @@ int main(int argc, char **argv) {
 
 		/* quotes do too */
 		in_quotes=0;
+
+		/* as does data */
+		in_data=0;
 
 		/* 2 bytes is to ignore size from beginning of file */
 		link_value=base_address+(offset-2);
