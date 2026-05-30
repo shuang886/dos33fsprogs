@@ -2,6 +2,7 @@
 /* by Vince Weaver (vince@deater.net)			*/
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h> /* strlen() */
 #include <unistd.h> /* getopt() */
 #include "version.h"
@@ -34,22 +35,34 @@ int main(int argc, char **argv) {
 	int line1,line2;
 	int link1,link2,link;
 	int debug=0,print_link=0;
-	int offset=0x801;
+	int offset;
 	int c;
+	int no_size=0;
+	int base_address=0x801;
 	FILE *fff;
 
 	/* Check command line arguments */
-	while ((c = getopt (argc, argv,"dl"))!=-1) {
+	while ((c = getopt (argc, argv,"b::dls"))!=-1) {
 		switch (c) {
 
+		case 'b':
+			if (optarg==NULL) {
+				fprintf(stderr,"Error, -b requires hexadecimal address\n");
+				exit(1);
+			}
+			base_address=strtol(optarg, NULL, 16);
+			break;
 		case 'd':
 			debug=1;
 			break;
 		case 'l':
 			print_link=1;
 			break;
+		case 's':
+			no_size=1;
+			break;
 		}
-        }
+	}
 
 	/* No file specified, used stdin */
 	if (optind==argc) {
@@ -64,13 +77,15 @@ int main(int argc, char **argv) {
 
 	}
 
+	if (!no_size) {
+		/* read size, first two bytes */
+		size1=fgetc(fff);
+		size2=fgetc(fff);
+		
+		if (debug) fprintf(stderr,"File size: %x %x\n",size1,size2);
+	}
 
-	/* read size, first two bytes */
-	size1=fgetc(fff);
-	size2=fgetc(fff);
-
-	if (debug) fprintf(stderr,"File size: %x %x\n",size1,size2);
-
+	offset=base_address;
 	while(!feof(fff)) {
 
 		/* link points to the next line */
